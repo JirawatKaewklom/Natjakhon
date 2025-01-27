@@ -1,0 +1,8 @@
+
+nav.sticky-header {
+    justify-content: space-between;
+}
+
+a.nav-link img{
+    float: inline-end;
+}
