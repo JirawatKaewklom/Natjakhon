@@ -102,12 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="col-md-8">
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
-                        <h3 class="text-center mb-0">Create Account</h3>
+                        <h3 class="text-center mb-0">สร้างบัญชี</h3>
                     </div>
                     <div class="card-body">
                         <?php if ($success): ?>
                             <div class="alert alert-success">
-                                Registration successful! You will be redirected to the dashboard...
+                            ลงทะเบียนสำเร็จ! คุณจะถูกนำไปยังแดชบอร์ด...
                             </div>
                         <?php endif; ?>
 
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                 <!-- Email -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="email" class="form-label">Email*</label>
+                                    <label for="email" class="form-label">อีเมล์*</label>
                                     <input type="email" class="form-control <?php echo isset($errors['email']) ? 'is-invalid' : ''; ?>"
                                            id="email" name="email" value="<?php echo htmlspecialchars($email ?? ''); ?>" required>
                                     <?php if (isset($errors['email'])): ?>
@@ -169,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                 <!-- Address -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="address_user" class="form-label">Address*</label>
+                                    <label for="address_user" class="form-label">ที่อยู่*</label>
                                     <input type="text" class="form-control <?php echo isset($errors['address_user']) ? 'is-invalid' : ''; ?>"
                                            id="address_user" name="address_user" value="<?php echo htmlspecialchars($address_user ?? ''); ?>" required>
                                     <?php if (isset($errors['address_user'])): ?>
@@ -181,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                 <!-- Phone -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="phone" class="form-label">Phone Number*</label>
+                                    <label for="phone" class="form-label">เบอร์โทรศัพท์*</label>
                                     <input type="tel" class="form-control <?php echo isset($errors['phone']) ? 'is-invalid' : ''; ?>"
                                            id="phone" name="phone" value="<?php echo htmlspecialchars($phone ?? ''); ?>" required>
                                     <?php if (isset($errors['phone'])): ?>
@@ -193,11 +193,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
 
                             <div class="mb-3">
-                                <button type="submit" class="btn btn-primary w-100">Register</button>
+                                <button type="submit" class="btn btn-primary w-100">ลงทะเบียน</button>
                             </div>
 
                             <div class="text-center">
-                                <p>Already have an account? <a href="login.php">Login here</a></p>
+                                <p>มีบัญชีอยู่แล้วใช่ไหม? <a href="login.php">เข้าสู่ระบบที่นี่</a></p>
                             </div>
                         </form>
                     </div>

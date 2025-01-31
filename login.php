@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Wholesale System</title>
+    <title>Natjakhon Wholesale System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="text-center">Login</h3>
+                        <h3 class="text-center">Natjakhon Wholesale</h3>
                     </div>
                     <div class="card-body">
                         <?php if (isset($error)): ?>
@@ -64,11 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <input type="password" class="form-control" id="password" name="password" required>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary w-100">Login</button>
+                            <button type="submit" class="btn btn-primary w-100">เข้าสู่ระบบ</button>
                         </form>
                         
                         <div class="mt-3 text-center">
-                            <a href="register.php">Don't have an account? Register here</a>
+                            <a href="register.php">ยังไม่มีบัญชี? ลงทะเบียนที่นี่</a>
                         </div>
                     </div>
                 </div>

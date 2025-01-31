@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Fetch Users
-$users_query = "SELECT * FROM users";
+// Fetch Users excluding admin
+$users_query = "SELECT * FROM users WHERE role != 'admin'";
 $users_result = $conn->query($users_query);
 ?>
 

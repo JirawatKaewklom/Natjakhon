@@ -76,32 +76,32 @@ $products_result = $conn->query("SELECT * FROM products");
 </head>
 <body>
 <div class="container my-5">
-    <h1 class="mb-4">Manage Products</h1>
+    <h1 class="mb-4">จัดการรายการสินค้า</h1>
 
     <!-- Form to add product -->
     <form method="POST" action="" enctype="multipart/form-data">
         <div class="mb-3">
-            <label for="name" class="form-label">Product Name</label>
+            <label for="name" class="form-label">ชื่อสินค้า</label>
             <input type="text" name="name" class="form-control" required>
         </div>
         <div class="mb-3">
-            <label for="description" class="form-label">Description</label>
-            <textarea name="description" class="form-control" required></textarea>
+            <label for="description" class="form-label">รายละเอียด</label>
+            <textarea name="description" class="form-control"></textarea>
         </div>
         <div class="mb-3">
-            <label for="price" class="form-label">Price</label>
+            <label for="price" class="form-label">ราคา</label>
             <input type="number" name="price" class="form-control" step="0.01" required>
         </div>
         <div class="mb-3">
-            <label for="stock_quantity" class="form-label">Stock Quantity</label>
+            <label for="stock_quantity" class="form-label">คงเหลือ</label>
             <input type="number" name="stock_quantity" class="form-control" required>
         </div>
 
         <!-- Dropdown for Category -->
         <div class="mb-3">
-            <label for="category_id" class="form-label">Category</label>
+            <label for="category_id" class="form-label">หมวดหมู่หลัก</label>
             <select name="category_id" id="category_id" class="form-control" required>
-                <option value="">Select Category</option>
+                <option value="">เลือกหมวดหมู่หลัก</option>
                 <?php while ($category = $categories_result->fetch_assoc()): ?>
                     <option value="<?= $category['id']; ?>"><?= $category['name']; ?></option>
                 <?php endwhile; ?>
@@ -110,50 +110,50 @@ $products_result = $conn->query("SELECT * FROM products");
 
         <!-- Dropdown for Subcategory -->
         <div class="mb-3">
-            <label for="subcategory_id" class="form-label">Subcategory</label>
+            <label for="subcategory_id" class="form-label">หมวดหมู่ย่อย</label>
             <select name="subcategory_id" id="subcategory_id" class="form-control" required>
-                <option value="">Select Subcategory</option>
+                <option value="">เลือกหมวดหมู่ย่อย</option>
                 <?php while ($subcategory = $subcategories_result->fetch_assoc()): ?>
-                    <option value="<?= $subcategory['id']; ?>" class="subcategory_option" data-category="<?= $subcategory['category_id']; ?>"><?= $subcategory['name']; ?></option>
+                    <option value="<?= $subcategory['id']; ?>"><?= $subcategory['name']; ?></option>
                 <?php endwhile; ?>
             </select>
         </div>
 
         <div class="mb-3">
-            <label for="image" class="form-label">Product Image</label>
+            <label for="image" class="form-label">รูปสินค้า</label>
             <input type="file" name="image" class="form-control" accept="image/*" required>
         </div>
-        <button type="submit" name="add_product" class="btn btn-success">Add Product</button>
+        <button type="submit" name="add_product" class="btn btn-success">เพิ่มรายการ</button>
     </form>
 
     <!-- Product List -->
-    <h2 class="mt-5">Product List</h2>
+    <h2 class="mt-5">รายการสินค้า</h2>
     <table class="table table-bordered">
         <thead>
         <tr>
-            <th>Product Name</th>
-            <th>Price</th>
-            <th>Stock Quantity</th>
-            <th>Image</th>
-            <th>Category</th>
-            <th>Subcategory</th>
-            <th>Actions</th>
+            <th>ชื่อสินค้า</th>
+            <th>ราคา</th>
+            <th>คงเหลือ</th>
+            <th>รูปสินค้า</th>
+            <th>หมวดหมู่หลัก</th>
+            <th>หมวดหมู่ย่อย</th>
+            <th>จัดการ</th>
         </tr>
         </thead>
         <tbody>
         <?php while ($product = $products_result->fetch_assoc()): ?>
             <tr>
                 <td><?= $product['name']; ?></td>
-                <td>$<?= number_format($product['price'], 2); ?></td>
+                <td>฿<?= number_format($product['price'], 2); ?></td>
                 <td><?= $product['stock_quantity']; ?></td>
                 <td><img src="<?= $product['image_url']; ?>" alt="<?= $product['name']; ?>" width="100"></td>
                 <td><?= $product['category_id']; ?></td>
                 <td><?= $product['subcategory_id']; ?></td>
                 <td>
-                    <a href="edit_product.php?id=<?= $product['id']; ?>" class="btn btn-warning btn-sm">Edit</a>
+                    <a href="edit_product.php?id=<?= $product['id']; ?>" class="btn btn-warning btn-sm">แก้ไข</a>
                     <form method="POST" action="delete_product.php" class="d-inline">
                         <input type="hidden" name="product_id" value="<?= $product['id']; ?>">
-                        <button type="submit" name="delete" class="btn btn-danger btn-sm">Delete</button>
+                        <button type="submit" name="delete" class="btn btn-danger btn-sm">ลบ</button>
                     </form>
                 </td>
             </tr>

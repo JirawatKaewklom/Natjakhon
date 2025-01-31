@@ -7,9 +7,12 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Query to fetch all pending orders for the logged-in user
-$query = "SELECT * FROM orders WHERE user_id = '{$_SESSION['user_id']}' AND status = 'Pending'";
-$pending_orders = $conn->query($query);
+// ใช้ Prepared Statement เพื่อป้องกัน SQL Injection
+$query = "SELECT * FROM orders WHERE user_id = ? AND status = 'Pending'";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$pending_orders = $stmt->get_result();
 
 ?>
 
@@ -23,47 +26,49 @@ $pending_orders = $conn->query($query);
 </head>
 <body>
 <div class="container my-5">
-    <h1 class="mb-4">Your Pending Orders</h1>
+    <h1 class="mb-4">รายละเอียดคำสั่งซื้อทั้งหมด</h1>
 
     <?php if ($pending_orders->num_rows > 0): ?>
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>Order ID</th>
-                    <th>Order Date</th>
-                    <th>Total Amount</th>
-                    <th>Total Price</th>
-                    <th>Status</th>
-                    <th>Action</th>
+                    <th>หมายเลขออเดอร์</th>
+                    <th>วันที่สั่งซื้อ</th>
+                    <th>รายการทั้งหมด</th>
+                    <th>ยอดสุทธิ</th>
+                    <th>สถานะ</th>
+                    <th>รายละเอียดคำสั่งซื้อ</th>
                 </tr>
             </thead>
             <tbody>
                 <?php while ($order = $pending_orders->fetch_assoc()): ?>
                     
                     <?php
-                    // คำนวณจำนวนสินค้าทั้งหมดในคำสั่งซื้อจากตาราง order_items
+                    // ดึงจำนวนสินค้าที่ไม่ซ้ำกันในคำสั่งซื้อนี้
                     $order_id = $order['id'];
-                    $item_query = "SELECT SUM(quantity) AS total_quantity FROM order_items WHERE order_id = '$order_id'";
-                    $item_result = $conn->query($item_query);
+                    $item_stmt = $conn->prepare("SELECT COUNT(DISTINCT product_id) AS total_items FROM order_items WHERE order_id = ?");
+                    $item_stmt->bind_param("i", $order_id);
+                    $item_stmt->execute();
+                    $item_result = $item_stmt->get_result();
                     $item_data = $item_result->fetch_assoc();
-                    $total_items = $item_data['total_quantity'];
+                    $total_items = $item_data['total_items'];
                     ?>
 
                     <tr>
-                        <td><?= $order['id']; ?></td>
-                        <td><?= date('d M Y', strtotime($order['order_date'])); ?></td>
-                        <td><?= number_format($total_items); ?> items</td> <!-- Display Total Items -->
+                        <td><?= htmlspecialchars($order['id']); ?></td>
+                        <td><?= date('d M Y', strtotime($order['created_at'])); ?></td>
+                        <td><?= number_format($total_items); ?> รายการ</td> <!-- ✅ เปลี่ยนจาก quantity เป็นจำนวนสินค้า -->
                         <td>฿<?= number_format($order['total_price'], 2); ?></td>
-                        <td><?= ucfirst($order['status']); ?></td>
+                        <td><?= ucfirst(htmlspecialchars($order['status'])); ?></td>
                         <td>
-                            <a href="order_confirmation.php?order_id=<?= $order['id']; ?>" class="btn btn-primary btn-sm">View Order</a>
+                            <a href="order_confirmation.php?order_id=<?= htmlspecialchars($order['id']); ?>" class="btn btn-primary btn-sm">ดูคำสั่งซื้อ</a>
                         </td>
                     </tr>
                 <?php endwhile; ?>
             </tbody>
         </table>
     <?php else: ?>
-        <p>You have no pending orders at the moment.</p>
+        <p>คุณไม่มีคำสั่งซื้อในขณะนี้.</p>
     <?php endif; ?>
 </div>
 

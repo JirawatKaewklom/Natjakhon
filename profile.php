@@ -18,7 +18,7 @@ if (isset($_POST['update_profile'])) {
     $last_name = mysqli_real_escape_string($conn, $_POST['last_name']);
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-    $address = mysqli_real_escape_string($conn, $_POST['address']);
+    $address = mysqli_real_escape_string($conn, $_POST['address_user']);
 
     // ใช้ Google Geocoding API เพื่อแปลงที่อยู่เป็น latitude และ longitude
     $geocode_url = "https://maps.googleapis.com/maps/api/geocode/json?address=" . urlencode($address) . "&key=YOUR_GOOGLE_MAPS_API_KEY";
@@ -46,7 +46,7 @@ if (isset($_POST['update_profile'])) {
     }
 
     // อัปเดตข้อมูลในฐานข้อมูล
-    $conn->query("UPDATE users SET first_name = '$first_name', last_name = '$last_name', email = '$email', phone = '$phone', address = '$address', latitude = '$latitude', longitude = '$longitude', profile_image = '$profile_image' WHERE id = '$user_id'");
+    $conn->query("UPDATE users SET first_name = '$first_name', last_name = '$last_name', email = '$email', phone = '$phone', address_user = '$address', latitude = '$latitude', longitude = '$longitude', profile_image = '$profile_image' WHERE id = '$user_id'");
 
     // แสดงข้อความสำเร็จ
     echo "<div class='alert alert-success'>Profile updated successfully!</div>";
@@ -65,7 +65,7 @@ if (isset($_POST['update_profile'])) {
 </head>
 <body>
 <div class="container my-5">
-    <h1 class="mb-4">User Profile</h1>
+    <h1 class="mb-4">โปรไฟล์ผู้ใช้</h1>
 
     <div class="row">
         <div class="col-md-4">
@@ -73,7 +73,7 @@ if (isset($_POST['update_profile'])) {
             <img src="<?= $user['profile_image']; ?>" alt="Profile Image" class="img-fluid rounded-circle mb-3" width="150">
             <form method="POST" enctype="multipart/form-data">
                 <div class="mb-3">
-                    <label for="profile_image" class="form-label">Profile Image</label>
+                    <label for="profile_image" class="form-label">รูปโปรไฟล์</label>
                     <input type="file" name="profile_image" class="form-control" id="profile_image">
                 </div>
         </div>
@@ -81,31 +81,31 @@ if (isset($_POST['update_profile'])) {
         <div class="col-md-8">
             <form method="POST">
                 <div class="mb-3">
-                    <label for="first_name" class="form-label">First Name</label>
+                    <label for="first_name" class="form-label">ชื่อจริง</label>
                     <input type="text" name="first_name" class="form-control" value="<?= $user['first_name']; ?>" required>
                 </div>
 
                 <div class="mb-3">
-                    <label for="last_name" class="form-label">Last Name</label>
+                    <label for="last_name" class="form-label">นามสกุล</label>
                     <input type="text" name="last_name" class="form-control" value="<?= $user['last_name']; ?>" required>
                 </div>
 
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
+                    <label for="email" class="form-label">อีเมล์</label>
                     <input type="email" name="email" class="form-control" value="<?= $user['email']; ?>" required>
                 </div>
 
                 <div class="mb-3">
-                    <label for="phone" class="form-label">Phone</label>
+                    <label for="phone" class="form-label">เบอร์โทรศัพท์</label>
                     <input type="text" name="phone" class="form-control" value="<?= $user['phone']; ?>" required>
                 </div>
 
                 <div class="mb-3">
-                    <label for="address" class="form-label">Address</label>
-                    <textarea name="address" class="form-control" rows="3"><?= $user['address_user']; ?></textarea>
+                    <label for="address" class="form-label">ที่อยู่</label>
+                    <textarea name="address_user" class="form-control" rows="3"><?= $user['address_user']; ?></textarea>
                 </div>
 
-                <button type="submit" name="update_profile" class="btn btn-primary">Update Profile</button>
+                <button type="submit" name="update_profile" class="btn btn-primary">อัพเดทโปรไฟล์</button>
             </form>
         </div>
     </div>
