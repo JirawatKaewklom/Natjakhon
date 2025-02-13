@@ -32,21 +32,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $error = "Invalid username or password";
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Natjakhon Wholesale System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="text-center">Natjakhon Wholesale</h3>
+
+<?php include 'head.php'; ?>
+<body class="bg-light">
+    <div class="container d-flex align-items-center justify-content-center min-vh-100">
+        <div class="row justify-content-center w-100">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header text-center bg-dark text-white">
+                        <h2>ร้านนัธจกรค้าส่ง</h2>
                     </div>
                     <div class="card-body">
                         <?php if (isset($error)): ?>
@@ -64,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <input type="password" class="form-control" id="password" name="password" required>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary w-100">เข้าสู่ระบบ</button>
+                            <button type="submit" class="btn btn-success w-100">เข้าสู่ระบบ</button>
                         </form>
                         
                         <div class="mt-3 text-center">
@@ -75,6 +69,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
         </div>
     </div>
+
+    <style>
+        body {
+            background: url('bg.jpg') no-repeat center center fixed;
+            background-size: cover; /* ทำให้ภาพไม่เบลอและครอบคลุมทั้งหน้าจอ */
+            background-position: center center;
+            background-attachment: fixed; /* ทำให้ภาพยึดตำแหน่งคงที่ */
+            filter: none; /* กำจัดเอฟเฟกต์เบลอหากมี */
+            color: #fff;
+        }
+
+        .container {
+            z-index: 10;
+        }
+
+        .card {
+            background-color: rgba(255, 255, 255, 0.9); /* White background with transparency */
+        }
+
+        .card-header {
+            border-radius: 10px 10px 0 0;
+        }
+
+        .form-control {
+            border-radius: 5px;
+        }
+
+        .btn-primary {
+            border-radius: 5px;
+        }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -1,6 +1,6 @@
 <?php
 require_once 'config.php';
-include 'navbar.php';
+include 'admin_navbar.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -74,36 +74,29 @@ if (isset($_POST['update_product'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Product</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<?php include 'head.php' ?>
 <body>
 <div class="container my-5">
-    <h1>Edit Product</h1>
+    <h1>แก้ไขสินค้า</h1>
     <form method="POST" enctype="multipart/form-data">
         <div class="mb-3">
-            <label for="name" class="form-label">Product Name</label>
+            <label for="name" class="form-label">ชื่อสินค้า</label>
             <input type="text" class="form-control" id="name" name="name" value="<?= $product['name']; ?>" required>
         </div>
         <div class="mb-3">
-            <label for="description" class="form-label">Description</label>
+            <label for="description" class="form-label">รายละเอียด</label>
             <textarea class="form-control" id="description" name="description" rows="3"><?= $product['description']; ?></textarea>
         </div>
         <div class="mb-3">
-            <label for="price" class="form-label">Price</label>
+            <label for="price" class="form-label">ราคา</label>
             <input type="number" class="form-control" id="price" name="price" value="<?= $product['price']; ?>" step="0.01" required>
         </div>
         <div class="mb-3">
-            <label for="stock_quantity" class="form-label">Stock Quantity</label>
+            <label for="stock_quantity" class="form-label">จำนวนคงเหลือ</label>
             <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" value="<?= $product['stock_quantity']; ?>" required>
         </div>
         <div class="mb-3">
-            <label for="category_id" class="form-label">Category</label>
+            <label for="category_id" class="form-label">หมวดหมู่หลัก</label>
             <select class="form-select" id="category_id" name="category_id" required>
                 <?php while ($category = $categories_query->fetch_assoc()): ?>
                     <option value="<?= $category['id']; ?>" <?= ($category['id'] == $product['category_id']) ? 'selected' : ''; ?>>
@@ -113,7 +106,7 @@ if (isset($_POST['update_product'])) {
             </select>
         </div>
         <div class="mb-3">
-            <label for="subcategory_id" class="form-label">Subcategory</label>
+            <label for="subcategory_id" class="form-label">หมวดหมู่ย่อย</label>
             <select class="form-select" id="subcategory_id" name="subcategory_id" required>
                 <?php while ($subcategory = $subcategories_query->fetch_assoc()): ?>
                     <option value="<?= $subcategory['id']; ?>" <?= ($subcategory['id'] == $product['subcategory_id']) ? 'selected' : ''; ?>>
@@ -123,12 +116,12 @@ if (isset($_POST['update_product'])) {
             </select>
         </div>
         <div class="mb-3">
-            <label for="image_url" class="form-label">Product Image</label>
+            <label for="image_url" class="form-label">รูปสินค้า</label>
             <input type="file" class="form-control" id="image_url" name="image_url">
-            <small>Leave blank to keep current image. Current image:</small><br>
+            <small>ภาพปัจจุบัน:</small><br>
             <img src="<?= $product['image_url']; ?>" alt="Current Image" width="150">
         </div>
-        <button type="submit" name="update_product" class="btn btn-primary">Update Product</button>
+        <button type="submit" name="update_product" class="btn btn-primary">เสร็จสิ้น</button>
     </form>
 </div>
 <script>

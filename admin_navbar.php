@@ -1,7 +1,8 @@
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
+<?php include 'head.php' ?>
+<nav class="navbar navbar-expand-lg bg-white navbar-light">
     <div class="container-fluid">
         <a class="navbar-brand" href="dashboard.php">
-        <img src="warehouse.jpg" alt="Website Logo" width="120" height="auto">
+        <img src="supermarket.gif" alt="Website Logo" width="50" height="auto">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
@@ -17,9 +18,12 @@
                 <li class="nav-item">
                     <a class="nav-link" href="manage_users.php">รายชื่อผู้ใช้</a>
                 </li>
-                <!-- <li class="nav-item">
-                    <a class="nav-link" href="manage_orders.php">Orders</a>
-                </li> -->
+                <li class="nav-item">
+                    <a class="nav-link" href="sales_report.php">รายงานการซื้อขาย</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="chat.php">แชท</a>
+                </li>
             </ul>
             <ul class="navbar-nav">
                 <li class="nav-item">

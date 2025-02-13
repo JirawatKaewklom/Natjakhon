@@ -7,30 +7,37 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
-// ตรวจสอบว่ามีข้อมูลที่จำเป็นหรือไม่
-if (isset($_POST['status']) && isset($_POST['order_id'])) {
-    $status = $_POST['status'];
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $order_id = $_POST['order_id'];
+    $status = $_POST['status'];
 
-    // ตรวจสอบค่าของ status ก่อนทำการอัพเดต
-    $valid_status = ['pending', 'processing', 'completed', 'cancelled'];
-    if (in_array($status, $valid_status)) {
-        // ใช้ prepared statement เพื่ออัพเดต status ในฐานข้อมูล
-        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $status, $order_id);
-        
+    // หากสถานะเป็น 'cancelled' ให้ลบคำสั่งซื้อและข้อมูลที่เกี่ยวข้อง
+    if ($status === 'cancelled') {
+        // ลบข้อมูลในตาราง order_items ที่เกี่ยวข้อง
+        $stmt = $conn->prepare("DELETE FROM order_items WHERE order_id = ?");
+        $stmt->bind_param("i", $order_id);
+        $stmt->execute();
+
+        // ลบคำสั่งซื้อจากตาราง orders
+        $stmt = $conn->prepare("DELETE FROM orders WHERE id = ?");
+        $stmt->bind_param("i", $order_id);
         if ($stmt->execute()) {
-            // ถ้าการอัพเดตสำเร็จ ให้กลับไปที่หน้าเดิม
-            header('Location: dashboard.php');
+            header('Location: dashboard.php'); // กลับไปหน้าแดชบอร์ด
             exit();
         } else {
-            // ถ้ามีข้อผิดพลาดเกิดขึ้น
-            echo "Error: " . $stmt->error;
+            echo "เกิดข้อผิดพลาดในการลบคำสั่งซื้อ";
         }
     } else {
-        echo "Invalid status value.";
+        // หากสถานะไม่ใช่ 'cancelled' ให้ทำการอัพเดทสถานะ
+        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $stmt->bind_param("si", $status, $order_id);
+
+        if ($stmt->execute()) {
+            header('Location: dashboard.php'); // กลับไปหน้าแดชบอร์ด
+            exit();
+        } else {
+            echo "เกิดข้อผิดพลาดในการอัพเดทสถานะคำสั่งซื้อ";
+        }
     }
-} else {
-    echo "Missing required fields.";
 }
 ?>

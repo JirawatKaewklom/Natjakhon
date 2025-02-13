@@ -10,12 +10,15 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-session_start();
+// ตรวจสอบการเริ่ม session ก่อน
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Image upload function
 function uploadProductImage($file) {
     $target_dir = "uploads/products/";
-    
+
     // Create directory if not exists
     if (!file_exists($target_dir)) {
         mkdir($target_dir, 0777, true);
@@ -24,11 +27,11 @@ function uploadProductImage($file) {
     $unique_filename = uniqid() . '_' . basename($file["name"]);
     $target_file = $target_dir . $unique_filename;
     $uploadOk = 1;
-    $imageFileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+    $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
 
     // Check if image file is a actual image or fake image
     $check = getimagesize($file["tmp_name"]);
-    if($check === false) {
+    if ($check === false) {
         return false;
     }
 
@@ -39,7 +42,7 @@ function uploadProductImage($file) {
 
     // Allow certain file formats
     $allowed_types = ["jpg", "jpeg", "png", "gif"];
-    if(!in_array($imageFileType, $allowed_types)) {
+    if (!in_array($imageFileType, $allowed_types)) {
         return false;
     }
 

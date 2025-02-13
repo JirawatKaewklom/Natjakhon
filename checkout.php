@@ -2,67 +2,103 @@
 require_once 'config.php';
 include 'navbar.php';
 
+// ตรวจสอบว่า session user_id มีค่าหรือไม่ ถ้าไม่มีส่งกลับไปหน้า login
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// ดึงข้อมูลที่อยู่จากผู้ใช้ในฐานข้อมูล
+// ดึงข้อมูลผู้ใช้
 $user_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 
-// ดึงข้อมูลสินค้าที่อยู่ในตะกร้าของผู้ใช้
-$cart_items = $conn->query("SELECT c.id, p.name, p.price, c.quantity FROM cart c INNER JOIN products p ON c.product_id = p.id WHERE c.user_id = '$user_id'");
+// ดึงข้อมูลสินค้าจากตะกร้า
+$stmt = $conn->prepare("SELECT c.id, c.product_id, p.name, p.price, c.quantity FROM cart c 
+                        INNER JOIN products p ON c.product_id = p.id 
+                        WHERE c.user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$cart_items = $stmt->get_result();
 
-// คำนวณราคารวมของสินค้าทั้งหมด
+// ตรวจสอบว่ามีสินค้าหรือไม่
+$no_items_in_cart = $cart_items->num_rows == 0;
+
+// คำนวณราคารวม
 $total_price = 0;
 while ($item = $cart_items->fetch_assoc()) {
     $total_price += $item['price'] * $item['quantity'];
 }
 
-// เมื่อผู้ใช้ยืนยันการสั่งซื้อ
-if (isset($_POST['checkout'])) {
+// เมื่อกด Checkout
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['checkout'])) {
+    if ($no_items_in_cart) {
+        echo "กรุณาเพิ่มสินค้าลงในตะกร้าก่อนทำการสั่งซื้อ.";
+        exit();
+    }
+
     $address = htmlspecialchars($_POST['address']);
     $payment_method = htmlspecialchars($_POST['payment_method']);
     $receipt_file = null;
 
-    // จัดการไฟล์ใบเสร็จสำหรับ QR Code Payment
-    if ($payment_method === "qr_code" && isset($_FILES['receipt_upload'])) {
+    // ป้องกันการอัพโหลดใบเสร็จกรณีไม่มีสินค้าหรือเลือกช่องทางชำระเงินไม่ใช่ QR Code
+    if ($payment_method === "qr_code" && $no_items_in_cart) {
+        echo "กรุณาเพิ่มสินค้าลงในตะกร้าก่อนทำการสั่งซื้อและเลือกการชำระเงินด้วย QR Code.";
+        exit();
+    }
+
+    // จัดการอัปโหลดใบเสร็จสำหรับ QR Code Payment
+    if ($payment_method === "qr_code" && isset($_FILES['receipt_upload']) && $_FILES['receipt_upload']['error'] == 0) {
         $upload_dir = "uploads/receipts/";
         if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true); // สร้างโฟลเดอร์หากยังไม่มี
+            mkdir($upload_dir, 0777, true);
         }
-        $receipt_file = $upload_dir . basename($_FILES["receipt_upload"]["name"]);
+
+        $file_ext = strtolower(pathinfo($_FILES["receipt_upload"]["name"], PATHINFO_EXTENSION));
+        $allowed_ext = ["jpg", "jpeg", "png", "pdf"];
+        if (!in_array($file_ext, $allowed_ext)) {
+            die("Invalid file type! Only JPG, PNG, and PDF are allowed.");
+        }
+
+        if ($_FILES["receipt_upload"]["size"] > 5 * 1024 * 1024) { // จำกัดขนาด 5MB
+            die("File size exceeds 5MB limit!");
+        }
+
+        $receipt_file = $upload_dir . uniqid("receipt_", true) . "." . $file_ext;
         if (!move_uploaded_file($_FILES["receipt_upload"]["tmp_name"], $receipt_file)) {
             die("Error uploading receipt file.");
         }
     }
 
-    // สร้างคำสั่งซื้อในฐานข้อมูล
-    $stmt = $conn->prepare("INSERT INTO orders (user_id, address_user, payment_method, total_price, receipt_file, status) VALUES (?, ?, ?, ?, ?, ?)");
+    // สร้างคำสั่งซื้อ
+    $stmt = $conn->prepare("INSERT INTO orders (user_id, address_user, payment_method, total_price, receipt_file, status) 
+                            VALUES (?, ?, ?, ?, ?, ?)");
     $status = "Pending";
     $stmt->bind_param("issdss", $user_id, $address, $payment_method, $total_price, $receipt_file, $status);
 
     if ($stmt->execute()) {
         $order_id = $stmt->insert_id;
 
-        // ย้ายข้อมูลจากตะกร้าไปที่คำสั่งซื้อ
-        $cart_items = $conn->query("SELECT * FROM cart WHERE user_id = '$user_id'");
-        while ($item = $cart_items->fetch_assoc()) {
-            $product_id = $item['product_id'];
-            $quantity = $item['quantity'];
-            $stmt_item = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)");
-            $stmt_item->bind_param("iii", $order_id, $product_id, $quantity);
-            $stmt_item->execute();
+        // เพิ่มสินค้าเข้าไปใน order_items
+        $stmt = $conn->prepare("INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)");
+        $cart_items = $conn->prepare("SELECT product_id, quantity FROM cart WHERE user_id = ?");
+        $cart_items->bind_param("i", $user_id);
+        $cart_items->execute();
+        $result = $cart_items->get_result();
+
+        while ($item = $result->fetch_assoc()) {
+            $stmt->bind_param("iii", $order_id, $item['product_id'], $item['quantity']);
+            $stmt->execute();
         }
 
-        // ลบสินค้าจากตะกร้า
-        $conn->query("DELETE FROM cart WHERE user_id = '$user_id'");
+        // ลบสินค้าออกจากตะกร้า
+        $stmt = $conn->prepare("DELETE FROM cart WHERE user_id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
 
-        // เปลี่ยนเส้นทางไปยังหน้าการยืนยันคำสั่งซื้อ
+        // ไปที่หน้า Order Confirmation
         header('Location: order_confirmation.php?order_id=' . $order_id);
         exit();
     } else {
@@ -70,54 +106,11 @@ if (isset($_POST['checkout'])) {
     }
 }
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<?php include 'head.php' ?>
 <body>
 <div class="container my-5">
     <h1 class="mb-4">ดำเนินการคำสั่งซื้อ</h1>
 
-    <!-- รายการสินค้าจากตะกร้า -->
-    <div class="table-responsive mb-4">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>ชื่อสินค้า</th>
-                    <th>ราคา</th>
-                    <th>จำนวน</th>
-                    <th>ยอดสุทธิ</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                // ดึงข้อมูลจากตะกร้า
-                $cart_items = $conn->query("SELECT c.id, p.name, p.price, c.quantity FROM cart c INNER JOIN products p ON c.product_id = p.id WHERE c.user_id = '$user_id'");
-                while ($item = $cart_items->fetch_assoc()) {
-                    $total_item_price = $item['price'] * $item['quantity'];
-                    echo "<tr>
-                            <td>{$item['name']}</td>
-                            <td>\${$item['price']}</td>
-                            <td>{$item['quantity']}</td>
-                            <td>\${$total_item_price}</td>
-                          </tr>";
-                }
-                ?>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- แสดงราคาสินค้ารวม -->
-    <div class="mb-4">
-        <h4>ยอดสุทธิ: ฿<?= number_format($total_price, 2); ?></h4>
-    </div>
-
-    <!-- ฟอร์มการกรอกข้อมูลการชำระเงิน -->
     <form method="POST" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="address" class="form-label">ที่อยู่การจัดส่ง</label>
@@ -132,25 +125,21 @@ if (isset($_POST['checkout'])) {
             </select>
         </div>
 
-        <!-- ข้อความสำหรับเก็บเงินปลายทาง -->
-        <div id="cash_on_delivery_message" class="alert alert-info mb-3" style="display: block;">
-            ทางร้านจะติดต่อหาลูกค้าทางเบอร์โทรศัพท์ หากว่าติดต่อไม่ได้หรือไม่มีการติดต่อกลับ รายการสั่งซื้อจะถูกยกเลิก
+        <div id="cash_on_delivery_message" class="alert alert-info mb-3">
+            ทางร้านจะติดต่อหาลูกค้าทางเบอร์โทรศัพท์ หากว่าติดต่อไม่ได้ รายการสั่งซื้อจะถูกยกเลิก
         </div>
 
-        <!-- QR Code Display -->
         <div id="qr_code_section" class="mb-3" style="display: none;">
-            <label for="qr_code_image" class="form-label">สแกน QR Code นี้เพื่อชำระเงิน</label>
+            <label class="form-label">สแกน QR Code นี้เพื่อชำระเงิน</label>
             <img src="qrpayment.jpg" alt="QR Code" class="img-fluid" style="max-width: 200px;">
         </div>
 
-        <!-- Upload Receipt -->
         <div id="upload_receipt_section" class="mb-3" style="display: none;">
-            <label for="receipt_upload" class="form-label">อัพโหลดใบเสร็จการชำระเงิน</label>
+            <label for="receipt_upload" class="form-label">อัพโหลดใบเสร็จ</label>
             <input type="file" name="receipt_upload" id="receipt_upload" class="form-control" accept="image/*" onchange="enablePlaceOrderButton()">
         </div>
 
-        <!-- ปุ่ม Place Order (แสดงเสมอ) -->
-        <button type="submit" name="checkout" id="place_order_button" class="btn btn-success">ยืนยันคำสั่งซื้อ</button>
+        <button type="submit" name="checkout" id="place_order_button" class="btn btn-success" <?= $no_items_in_cart ? 'disabled' : ''; ?>>ยืนยันคำสั่งซื้อ</button>
     </form>
 </div>
 
@@ -163,15 +152,22 @@ if (isset($_POST['checkout'])) {
         const cashOnDeliveryMessage = document.getElementById("cash_on_delivery_message");
 
         if (paymentMethod === "qr_code") {
-            qrCodeSection.style.display = "block";
-            uploadReceiptSection.style.display = "block";
-            placeOrderButton.style.display = "none";
-            cashOnDeliveryMessage.style.display = "none"; // Hide message for QR code payment
+            if (<?= $no_items_in_cart ? 'true' : 'false' ?>) {
+                alert("กรุณาเพิ่มสินค้าลงในตะกร้าก่อนทำการสั่งซื้อ.");
+                placeOrderButton.disabled = true;
+                qrCodeSection.style.display = "none";
+                uploadReceiptSection.style.display = "none";
+            } else {
+                qrCodeSection.style.display = "block";
+                uploadReceiptSection.style.display = "block";
+                placeOrderButton.disabled = true;
+                cashOnDeliveryMessage.style.display = "none";
+            }
         } else {
             qrCodeSection.style.display = "none";
             uploadReceiptSection.style.display = "none";
-            placeOrderButton.style.display = "block";
-            cashOnDeliveryMessage.style.display = "block"; // Show message for cash on delivery
+            placeOrderButton.disabled = false;
+            cashOnDeliveryMessage.style.display = "block";
         }
     }
 
@@ -180,9 +176,9 @@ if (isset($_POST['checkout'])) {
         const placeOrderButton = document.getElementById("place_order_button");
 
         if (receiptUpload.files.length > 0) {
-            placeOrderButton.style.display = "block";
+            placeOrderButton.disabled = false;
         } else {
-            placeOrderButton.style.display = "none";
+            placeOrderButton.disabled = true;
         }
     }
 </script>

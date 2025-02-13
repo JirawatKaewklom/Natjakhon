@@ -15,23 +15,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // Validate username
     if (empty($username)) {
-        $errors['username'] = 'Username is required';
+        $errors['username'] = 'จำเป็นต้องมีชื่อผู้ใช้';
     } elseif (strlen($username) < 3 || strlen($username) > 50) {
-        $errors['username'] = 'Username must be between 3 and 50 characters';
+        $errors['username'] = 'ชื่อผู้ใช้ต้องมีความยาวระหว่าง 3 ถึง 50 ตัวอักษร';
     }
     
     // Validate email
     if (empty($email)) {
-        $errors['email'] = 'Email is required';
+        $errors['email'] = 'จำเป็นต้องระบุอีเมล';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Invalid email format';
+        $errors['email'] = 'รูปแบบอีเมล์ไม่ถูกต้อง';
     }
     
-    // Validate password
+    // Validate password (allow any characters but limit length to 13)
     if (empty($password)) {
-        $errors['password'] = 'Password is required';
+        $errors['password'] = 'จำเป็นต้องมีรหัสผ่าน';
     } elseif (strlen($password) < 8) {
-        $errors['password'] = 'Password must be at least 8 characters long';
+        $errors['password'] = 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร';
+    } elseif (strlen($password) > 13) {
+        $errors['password'] = 'รหัสผ่านต้องไม่เกิน 13 ตัวอักษร';
     }
     
     // Validate confirm password
@@ -39,22 +41,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $errors['confirm_password'] = 'Passwords do not match';
     }
     
-    // Validate company name
+    // Validate address
     if (empty($address_user)) {
-        $errors['address_user'] = 'Company name is required';
+        $errors['address_user'] = 'รหัสผ่านไม่ตรงกัน';
     }
     
-    // Validate phone
+    // Validate phone number
     if (empty($phone)) {
-        $errors['phone'] = 'Phone number is required';
+        $errors['phone'] = 'จำเป็นต้องมีหมายเลขโทรศัพท์';
+    } elseif (!preg_match('/^[0-9]{10}$/', $phone)) {
+        $errors['phone'] = 'หมายเลขโทรศัพท์จะต้องมี 10 หลักพอดีและประกอบด้วยตัวเลขเท่านั้น';
+    } else {
+        // Check if phone number already exists
+        $stmt = $conn->prepare("SELECT id FROM users WHERE phone = ?");
+        $stmt->bind_param("s", $phone);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            $errors['phone'] = 'หมายเลขโทรศัพท์มีอยู่แล้ว';
+        }
     }
-    
+
     // Check if username already exists
     $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     if ($stmt->get_result()->num_rows > 0) {
-        $errors['username'] = 'Username already exists';
+        $errors['username'] = 'ชื่อผู้ใช้มีอยู่แล้ว';
     }
     
     // Check if email already exists
@@ -62,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $stmt->bind_param("s", $email);
     $stmt->execute();
     if ($stmt->get_result()->num_rows > 0) {
-        $errors['email'] = 'Email already exists';
+        $errors['email'] = 'อีเมล์นี้มีอยู่แล้ว';
     }
     
     // If no errors, proceed with registration
@@ -80,34 +92,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['username'] = $username;
             $_SESSION['role'] = 'user';
             
-            // Redirect to dashboard after 2 seconds
-            header("refresh:2;url=index.php");
+            // Redirect to dashboard or home page after registration
+            header("Location: index.php");
+            exit;
         } else {
-            $errors['general'] = 'Registration failed. Please try again.';
+            $errors['general'] = 'การลงทะเบียนล้มเหลว กรุณาลองใหม่อีกครั้ง';
         }
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Wholesale System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+
+<?php include 'head.php' ?>
+<body>
     <div class="container mt-5">
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header text-center bg-dark text-white">
                         <h3 class="text-center mb-0">สร้างบัญชี</h3>
                     </div>
                     <div class="card-body">
                         <?php if ($success): ?>
                             <div class="alert alert-success">
-                            ลงทะเบียนสำเร็จ! คุณจะถูกนำไปยังแดชบอร์ด...
+                                ลงทะเบียนสำเร็จ! คุณจะถูกนำไปยังหน้าหลัก...
                             </div>
                         <?php endif; ?>
 
@@ -145,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                 <!-- Password -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="password" class="form-label">Password*</label>
+                                    <label for="password" class="form-label">รหัสผ่าน*</label>
                                     <input type="password" class="form-control <?php echo isset($errors['password']) ? 'is-invalid' : ''; ?>"
                                            id="password" name="password" required>
                                     <?php if (isset($errors['password'])): ?>
@@ -157,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                                 <!-- Confirm Password -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="confirm_password" class="form-label">Confirm Password*</label>
+                                    <label for="confirm_password" class="form-label">ยืนยันรหัสผ่าน*</label>
                                     <input type="password" class="form-control <?php echo isset($errors['confirm_password']) ? 'is-invalid' : ''; ?>"
                                            id="confirm_password" name="confirm_password" required>
                                     <?php if (isset($errors['confirm_password'])): ?>
@@ -183,7 +190,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <div class="col-md-6 mb-3">
                                     <label for="phone" class="form-label">เบอร์โทรศัพท์*</label>
                                     <input type="tel" class="form-control <?php echo isset($errors['phone']) ? 'is-invalid' : ''; ?>"
-                                           id="phone" name="phone" value="<?php echo htmlspecialchars($phone ?? ''); ?>" required>
+                                           id="phone" name="phone" value="<?php echo htmlspecialchars($phone ?? ''); ?>" required
+                                           maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                                     <?php if (isset($errors['phone'])): ?>
                                         <div class="invalid-feedback">
                                             <?php echo $errors['phone']; ?>
@@ -193,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
 
                             <div class="mb-3">
-                                <button type="submit" class="btn btn-primary w-100">ลงทะเบียน</button>
+                                <button type="submit" class="btn btn-success w-100">ลงทะเบียน</button>
                             </div>
 
                             <div class="text-center">
@@ -205,6 +213,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
         </div>
     </div>
+
+    <style>
+        body {
+            background: url('bg.jpg') no-repeat center center fixed;
+            background-size: cover;
+            background-position: center center;
+            background-attachment: fixed;
+            filter: none;
+            color: #fff;
+        }
+
+        .container {
+            z-index: 10;
+        }
+
+        .card {
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+
+        .card-header {
+            border-radius: 10px 10px 0 0;
+        }
+
+        .form-control {
+            border-radius: 5px;
+        }
+
+        .btn-primary {
+            border-radius: 5px;
+        }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

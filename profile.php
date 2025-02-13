@@ -55,30 +55,25 @@ if (isset($_POST['update_profile'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Profile</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<?php include 'head.php' ?>
 <body>
 <div class="container my-5">
-    <h1 class="mb-4">โปรไฟล์ผู้ใช้</h1>
+    <h1 class="text-center mb-4">โปรไฟล์ผู้ใช้</h1>
 
-    <div class="row">
-        <div class="col-md-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
             <!-- รูปหน้าปก -->
-            <img src="<?= $user['profile_image']; ?>" alt="Profile Image" class="img-fluid rounded-circle mb-3" width="150">
-            <form method="POST" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="profile_image" class="form-label">รูปโปรไฟล์</label>
-                    <input type="file" name="profile_image" class="form-control" id="profile_image">
-                </div>
+            <div class="text-center mb-4">
+                <img src="<?= $user['profile_image']; ?>" alt="Profile Image" class="img-fluid rounded-circle" width="150">
+                <form method="POST" enctype="multipart/form-data" class="mt-3">
+                    <div class="mb-3">
+                        <label for="profile_image" class="form-label">อัปโหลดรูปโปรไฟล์ใหม่</label>
+                        <input type="file" name="profile_image" class="form-control" id="profile_image">
+                    </div>
+            </div>
         </div>
 
-        <div class="col-md-8">
+        <div class="col-md-8 col-lg-6">
             <form method="POST">
                 <div class="mb-3">
                     <label for="first_name" class="form-label">ชื่อจริง</label>
@@ -101,16 +96,17 @@ if (isset($_POST['update_profile'])) {
                 </div>
 
                 <div class="mb-3">
-                    <label for="address" class="form-label">ที่อยู่</label>
-                    <textarea name="address_user" class="form-control" rows="3"><?= $user['address_user']; ?></textarea>
+                    <label for="address_user" class="form-label">ที่อยู่</label>
+                    <textarea name="address_user" class="form-control" rows="3" required><?= $user['address_user']; ?></textarea>
                 </div>
 
-                <button type="submit" name="update_profile" class="btn btn-primary">อัพเดทโปรไฟล์</button>
+                <button type="submit" name="update_profile" class="btn btn-primary w-100">อัปเดตโปรไฟล์</button>
             </form>
         </div>
     </div>
 </div>
 
+<!-- Bootstrap JS (Optional) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

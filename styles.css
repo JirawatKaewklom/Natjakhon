@@ -1,4 +1,14 @@
 
+body {
+    font-family: "Athiti", serif;
+    font-weight: 400;
+    font-style: normal;
+    background-image: url('wall.jpg');
+    background-size: cover; /* ทำให้ภาพครอบคลุมพื้นที่ทั้งหมด */
+    background-position: center; /* วางภาพตรงกลาง */
+    background-attachment: fixed; /* ภาพจะคงที่เมื่อเลื่อนหน้า */
+}
+
 nav.sticky-header {
     justify-content: space-between;
 }
@@ -6,3 +16,6 @@ nav.sticky-header {
 a.nav-link img{
     float: inline-end;
 }
+nav {
+    box-shadow: 0 2px 4px 0 rgba(0,0,0,.2);
+  }

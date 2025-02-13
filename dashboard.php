@@ -1,5 +1,7 @@
 <?php
 require_once 'config.php';
+include 'admin_navbar.php';
+include "head.php";
 
 // ตรวจสอบว่าผู้ใช้ล็อกอินและเป็น admin หรือไม่
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
@@ -7,74 +9,86 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
+// ฟังก์ชันเชื่อมต่อฐานข้อมูลและตรวจสอบข้อผิดพลาด
+function executeQuery($conn, $query, $params = []) {
+    $stmt = $conn->prepare($query);
+    if ($stmt === false) {
+        die('Query preparation failed: ' . $conn->error);
+    }
+    
+    if (!empty($params)) {
+        $stmt->bind_param(...$params);
+    }
+    
+    $stmt->execute();
+    return $stmt->get_result();
+}
+
 // ฟังก์ชันสำหรับคำนวณ total_amount ของคำสั่งซื้อ (นับจำนวนสินค้าที่แตกต่างกัน)
 function getTotalAmount($conn, $orderId) {
-    $stmt = $conn->prepare("SELECT COUNT(DISTINCT product_id) as total_amount FROM order_items WHERE order_id = ?");
-    $stmt->bind_param("i", $orderId);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $query = "SELECT COUNT(DISTINCT product_id) as total_amount FROM order_items WHERE order_id = ?";
+    $result = executeQuery($conn, $query, ['i', $orderId]);
     $row = $result->fetch_assoc();
     return $row['total_amount'] ?? 0; // ถ้าไม่มีค่า ให้คืน 0
 }
 
+// ฟังก์ชันสำหรับการดึงข้อมูลจำนวนผู้ใช้ทั้งหมด
+function getTotalUsers($conn) {
+    $query = "SELECT COUNT(*) as total FROM users WHERE role = 'user'";
+    $result = executeQuery($conn, $query);
+    $row = $result->fetch_assoc();
+    return $row['total'];
+}
+
+// ฟังก์ชันสำหรับการดึงข้อมูลจำนวนสินค้าทั้งหมด
+function getTotalProducts($conn) {
+    $query = "SELECT COUNT(*) as total FROM products";
+    $result = executeQuery($conn, $query);
+    $row = $result->fetch_assoc();
+    return $row['total'];
+}
+
+// ฟังก์ชันสำหรับการดึงข้อมูลจำนวนคำสั่งซื้อทั้งหมด
+function getTotalOrders($conn) {
+    $query = "SELECT COUNT(*) as total FROM orders";
+    $result = executeQuery($conn, $query);
+    $row = $result->fetch_assoc();
+    return $row['total'];
+}
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Wholesale System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+
 <body>
-    <?php include 'admin_navbar.php'; ?>
-    
     <div class="container mt-4">
         <div class="row">
             <div class="col-md-12">
-                <h2>แผงควบคุมผู้ดูแลระบบ</h2>
+                <h2 class="text-center">แผงควบคุมผู้ดูแลระบบ</h2>
             </div>
         </div>
         
         <div class="row mt-4">
             <div class="col-md-4">
-                <div class="card">
+                <div class="card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">จำนวนผู้ใช้ทั้งหมด</h5>
-                        <?php
-                        $sql = "SELECT COUNT(*) as total FROM users WHERE role = 'user'";
-                        $result = $conn->query($sql);
-                        $row = $result->fetch_assoc();
-                        ?>
-                        <p class="card-text display-4"><?php echo $row['total']; ?></p>
+                        <p class="card-text display-4"><?= getTotalUsers($conn); ?></p>
                     </div>
                 </div>
             </div>
             
             <div class="col-md-4">
-                <div class="card">
+                <div class="card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">จำนวนสินค้าในคลังทั้งหมด</h5>
-                        <?php
-                        $sql = "SELECT COUNT(*) as total FROM products";
-                        $result = $conn->query($sql);
-                        $row = $result->fetch_assoc();
-                        ?>
-                        <p class="card-text display-4"><?php echo $row['total']; ?></p>
+                        <p class="card-text display-4"><?= getTotalProducts($conn); ?></p>
                     </div>
                 </div>
             </div>
             
             <div class="col-md-4">
-                <div class="card">
+                <div class="card shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title">จำนวนรายการสั่งซื้อทั้งหมด</h5>
-                        <?php
-                        $sql = "SELECT COUNT(*) as total FROM orders";
-                        $result = $conn->query($sql);
-                        $row = $result->fetch_assoc();
-                        ?>
-                        <p class="card-text display-4"><?php echo $row['total']; ?></p>
+                        <p class="card-text display-4"><?= getTotalOrders($conn); ?></p>
                     </div>
                 </div>
             </div>
@@ -83,9 +97,9 @@ function getTotalAmount($conn, $orderId) {
         <!-- Recent Orders -->
         <div class="row mt-4">
             <div class="col-md-12">
-                <h3>คำสั่งซื้อล่าสุด</h3>
-                <table class="table">
-                    <thead>
+                <h3 class="text-info">คำสั่งซื้อล่าสุด</h3>
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="table-primary">
                         <tr>
                             <th>หมายเลขออเดอร์</th>
                             <th>ลูกค้า</th>
@@ -99,13 +113,12 @@ function getTotalAmount($conn, $orderId) {
                     </thead>
                     <tbody>
                         <?php
-                        $sql = "SELECT o.*, u.username FROM orders o 
+                        $query = "SELECT o.*, u.username FROM orders o 
                                 JOIN users u ON o.user_id = u.id 
                                 WHERE o.status != 'completed'
                                 ORDER BY o.created_at DESC LIMIT 10";
-                        $result = $conn->query($sql);
+                        $result = executeQuery($conn, $query);
                         while ($row = $result->fetch_assoc()) {
-                            // คำนวณจำนวนสินค้าที่แตกต่างกัน
                             $totalAmount = getTotalAmount($conn, $row['id']);
                             ?>
                             <tr>
@@ -142,9 +155,9 @@ function getTotalAmount($conn, $orderId) {
         <!-- Completed Orders -->
         <div class="row mt-4">
             <div class="col-md-12">
-                <h3>คำสั่งซื้อที่เสร็จสมบูรณ์แล้ว</h3>
-                <table class="table">
-                    <thead>
+                <h3 class="text-success">คำสั่งซื้อที่เสร็จสมบูรณ์แล้ว</h3>
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="table-success">
                         <tr>
                             <th>หมายเลขออเดอร์</th>
                             <th>ลูกค้า</th>
@@ -156,13 +169,12 @@ function getTotalAmount($conn, $orderId) {
                     </thead>
                     <tbody>
                         <?php
-                        $sql = "SELECT o.*, u.username FROM orders o 
+                        $query = "SELECT o.*, u.username FROM orders o 
                                 JOIN users u ON o.user_id = u.id 
                                 WHERE o.status = 'completed'
                                 ORDER BY o.created_at DESC LIMIT 10";
-                        $result = $conn->query($sql);
+                        $result = executeQuery($conn, $query);
                         while ($row = $result->fetch_assoc()) {
-                            // คำนวณจำนวนสินค้าที่แตกต่างกัน
                             $totalAmount = getTotalAmount($conn, $row['id']);
                             ?>
                             <tr>
@@ -173,6 +185,10 @@ function getTotalAmount($conn, $orderId) {
                                 <td>฿<?php echo number_format($row['total_price'], 2); ?></td>
                                 <td>
                                     <a href="order_confirmation.php?order_id=<?= $row['id']; ?>" class="btn btn-info btn-sm">ดูรายการคำสั่งซื้อ</a>
+                                    <form action="delete_order.php" method="POST" class="d-inline" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อนี้?');">
+                                    <input type="hidden" name="order_id" value="<?= $row['id']; ?>">
+                                    <button type="submit" class="btn btn-danger btn-sm">ลบ</button>
+                                    </form>
                                 </td>
                             </tr>
                             <?php

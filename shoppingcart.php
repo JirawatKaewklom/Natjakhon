@@ -83,14 +83,7 @@ if (isset($_POST['add_to_cart'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping Cart</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<?php include 'head.php' ?>
 <body>
 <div class="container my-5">
     <h1 class="mb-4">รายการสินค้า</h1>
@@ -146,7 +139,7 @@ if (isset($_POST['add_to_cart'])) {
                         <h5 class="card-title"><?= $product['name']; ?></h5>
                         <p class="card-text"><?= $product['description']; ?></p>
                         <p class="card-text">ราคา : ฿<?= number_format($product['price'], 2); ?></p>
-                        <p class="card-text">คงเหลือ : <?= $product['stock_quantity']; ?></p> <!-- Display stock quantity -->
+                        <p class="card-text">จำนวนสินค้าในสต็อก : <?= $product['stock_quantity']; ?></p> <!-- Display stock quantity -->
                         <form method="POST">
                             <input type="hidden" name="product_id" value="<?= $product['id']; ?>">
                             <div class="mb-3">
