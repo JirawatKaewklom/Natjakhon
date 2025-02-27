@@ -7,49 +7,63 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// ดึงข้อมูลผู้ใช้จากฐานข้อมูล
 $user_id = $_SESSION['user_id'];
-$user_result = $conn->query("SELECT * FROM users WHERE id = '$user_id'");
-$user = $user_result->fetch_assoc();
+$stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
-// เมื่อมีการอัปเดตข้อมูลผู้ใช้
-if (isset($_POST['update_profile'])) {
-    $first_name = mysqli_real_escape_string($conn, $_POST['first_name']);
-    $last_name = mysqli_real_escape_string($conn, $_POST['last_name']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-    $address = mysqli_real_escape_string($conn, $_POST['address_user']);
+// สร้าง CSRF Token หากยังไม่มี
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
-    // ใช้ Google Geocoding API เพื่อแปลงที่อยู่เป็น latitude และ longitude
-    $geocode_url = "https://maps.googleapis.com/maps/api/geocode/json?address=" . urlencode($address) . "&key=YOUR_GOOGLE_MAPS_API_KEY";
-    $geocode_result = json_decode(file_get_contents($geocode_url));
-
-    if ($geocode_result->status == 'OK') {
-        $latitude = $geocode_result->results[0]->geometry->location->lat;
-        $longitude = $geocode_result->results[0]->geometry->location->lng;
-    } else {
-        $latitude = null;
-        $longitude = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Invalid CSRF token.");
     }
 
-    // อัปโหลดรูปภาพ (รูปหน้าปก)
+    $first_name = htmlspecialchars($_POST['first_name']);
+    $last_name = htmlspecialchars($_POST['last_name']);
+    $email = htmlspecialchars($_POST['email']);
+    $phone = htmlspecialchars($_POST['phone']);
+    $address = htmlspecialchars($_POST['address_user']);
+
+    // ตรวจสอบอีเมลซ้ำ
+    $email_check = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+    $email_check->bind_param("si", $email, $user_id);
+    $email_check->execute();
+    if ($email_check->get_result()->num_rows > 0) {
+        die("This email is already in use.");
+    }
+    $email_check->close();
+
+    // อัปโหลดรูปโปรไฟล์
+    $profile_image = $user['profile_image'];
     if ($_FILES['profile_image']['error'] == 0) {
+        $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+        $file_type = mime_content_type($_FILES["profile_image"]["tmp_name"]);
+        
+        if (!in_array($file_type, $allowed_types) || $_FILES["profile_image"]["size"] > 2 * 1024 * 1024) {
+            die("Invalid file type or size. Only JPG, PNG, GIF under 2MB allowed.");
+        }
+        
         $target_dir = "uploads/";
-        $target_file = $target_dir . basename($_FILES["profile_image"]["name"]);
+        $file_name = uniqid() . "_" . basename($_FILES["profile_image"]["name"]);
+        $target_file = $target_dir . $file_name;
+        
         if (move_uploaded_file($_FILES["profile_image"]["tmp_name"], $target_file)) {
             $profile_image = $target_file;
-        } else {
-            $profile_image = $user['profile_image']; // ใช้รูปเดิมหากไม่อัปโหลดใหม่
         }
-    } else {
-        $profile_image = $user['profile_image']; // ใช้รูปเดิมหากไม่อัปโหลดใหม่
     }
-
+    
     // อัปเดตข้อมูลในฐานข้อมูล
-    $conn->query("UPDATE users SET first_name = '$first_name', last_name = '$last_name', email = '$email', phone = '$phone', address_user = '$address', latitude = '$latitude', longitude = '$longitude', profile_image = '$profile_image' WHERE id = '$user_id'");
-
-    // แสดงข้อความสำเร็จ
-    echo "<div class='alert alert-success'>Profile updated successfully!</div>";
+    $stmt = $conn->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, address_user = ?, profile_image = ? WHERE id = ?");
+    $stmt->bind_param("ssssssi", $first_name, $last_name, $email, $phone, $address, $profile_image, $user_id);
+    $stmt->execute();
+    $stmt->close();
+    
     header('Location: profile.php');
     exit();
 }
@@ -59,54 +73,45 @@ if (isset($_POST['update_profile'])) {
 <body>
 <div class="container my-5">
     <h1 class="text-center mb-4">โปรไฟล์ผู้ใช้</h1>
-
     <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-4">
-            <!-- รูปหน้าปก -->
-            <div class="text-center mb-4">
-                <img src="<?= $user['profile_image']; ?>" alt="Profile Image" class="img-fluid rounded-circle" width="150">
-                <form method="POST" enctype="multipart/form-data" class="mt-3">
-                    <div class="mb-3">
-                        <label for="profile_image" class="form-label">อัปโหลดรูปโปรไฟล์ใหม่</label>
-                        <input type="file" name="profile_image" class="form-control" id="profile_image">
-                    </div>
-            </div>
+        <div class="col-md-6 col-lg-4 text-center">
+            <img src="<?= htmlspecialchars($user['profile_image']); ?>" alt="Profile Image" class="img-fluid rounded-circle" width="150">
         </div>
-
         <div class="col-md-8 col-lg-6">
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                 <div class="mb-3">
-                    <label for="first_name" class="form-label">ชื่อจริง</label>
-                    <input type="text" name="first_name" class="form-control" value="<?= $user['first_name']; ?>" required>
+                    <label class="form-label">ชื่อจริง</label>
+                    <input type="text" name="first_name" class="form-control" value="<?= htmlspecialchars($user['first_name']); ?>">
                 </div>
-
                 <div class="mb-3">
-                    <label for="last_name" class="form-label">นามสกุล</label>
-                    <input type="text" name="last_name" class="form-control" value="<?= $user['last_name']; ?>" required>
+                    <label class="form-label">นามสกุล</label>
+                    <input type="text" name="last_name" class="form-control" value="<?= htmlspecialchars($user['last_name']); ?>">
                 </div>
-
                 <div class="mb-3">
-                    <label for="email" class="form-label">อีเมล์</label>
-                    <input type="email" name="email" class="form-control" value="<?= $user['email']; ?>" required>
+                    <label class="form-label">อีเมล</label>
+                    <div class="input-group">
+                        <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($user['email']); ?>" readonly>
+                        <a href="change_email.php" class="btn btn-warning">เปลี่ยน</a>
+                    </div>
                 </div>
-
                 <div class="mb-3">
-                    <label for="phone" class="form-label">เบอร์โทรศัพท์</label>
-                    <input type="text" name="phone" class="form-control" value="<?= $user['phone']; ?>" required>
+                    <label class="form-label">เบอร์โทรศัพท์</label>
+                    <input type="text" name="phone" class="form-control" value="<?= htmlspecialchars($user['phone']); ?>" required pattern="\d{10}" title="กรุณากรอกหมายเลขโทรศัพท์ 10 หลัก">
                 </div>
-
                 <div class="mb-3">
-                    <label for="address_user" class="form-label">ที่อยู่</label>
-                    <textarea name="address_user" class="form-control" rows="3" required><?= $user['address_user']; ?></textarea>
+                    <label class="form-label">ที่อยู่</label>
+                    <textarea name="address_user" class="form-control" rows="3" required><?= htmlspecialchars($user['address_user']); ?></textarea>
                 </div>
-
+                <div class="mb-3">
+                    <label class="form-label">อัปโหลดรูปโปรไฟล์ใหม่</label>
+                    <input type="file" name="profile_image" class="form-control">
+                </div>
                 <button type="submit" name="update_profile" class="btn btn-primary w-100">อัปเดตโปรไฟล์</button>
             </form>
         </div>
     </div>
 </div>
-
-<!-- Bootstrap JS (Optional) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

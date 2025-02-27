@@ -1,5 +1,5 @@
 <?php include 'head.php' ?>
-<nav class="navbar navbar-expand-lg bg-white navbar-light">
+<nav class="navbar navbar-expand-lg bg-white navbar-light sticky-top">
     <div class="container-fluid">
         <a class="navbar-brand" href="dashboard.php">
         <img src="supermarket.gif" alt="Website Logo" width="50" height="auto">
@@ -20,9 +20,6 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="sales_report.php">รายงานการซื้อขาย</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="chat.php">แชท</a>
                 </li>
             </ul>
             <ul class="navbar-nav">

@@ -1,8 +1,48 @@
 <?php
 require_once 'config.php';
+require 'vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $errors = [];
 $success = false;
+
+function generateToken($length = 50) {
+    $token = bin2hex(random_bytes($length));
+    $timestamp = time();
+    return $token . '.' . $timestamp;
+}
+
+function sendVerificationEmail($email, $token) {
+    $mail = new PHPMailer(true);
+
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'jojo18995@gmail.com'; // ใช้อีเมลของคุณ
+        $mail->Password = 'mqgd gbmg twtz yakx'; // ใช้รหัสผ่านแอปพลิเคชัน
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
+
+        // Recipients
+        $mail->setFrom('no-reply@yourdomain.com', 'NatjakhonWholesale');
+        $mail->addAddress($email);
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = 'Email Verification';
+        $mail->Body    = 'กรุณาคลิกลิงค์ด้านล่างเพื่อยืนยันที่อยู่อีเมลของคุณ:<br>';
+        $mail->Body   .= '<a href="https://jojo.infotopia.club/project/verify.php?token=' . $token . '">Verify Email</a>';
+
+        $mail->send();
+        echo 'Message has been sent';
+    } catch (Exception $e) {
+        echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Get form data
@@ -38,12 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // Validate confirm password
     if ($password !== $confirm_password) {
-        $errors['confirm_password'] = 'Passwords do not match';
+        $errors['confirm_password'] = 'รหัสผ่านไม่ตรงกัน';
     }
     
     // Validate address
     if (empty($address_user)) {
-        $errors['address_user'] = 'รหัสผ่านไม่ตรงกัน';
+        $errors['address_user'] = 'ที่อยู่จำเป็น';
     }
     
     // Validate phone number
@@ -80,21 +120,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // If no errors, proceed with registration
     if (empty($errors)) {
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        
-        $sql = "INSERT INTO users (username, email, password, address_user, phone, role) VALUES (?, ?, ?, ?, ?, 'user')";
+        $verification_token = generateToken();
+
+        $sql = "INSERT INTO users (username, email, password, address_user, phone, role, verification_token, email_verified) VALUES (?, ?, ?, ?, ?, 'user', ?, 0)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssss", $username, $email, $hashed_password, $address_user, $phone);
+        $stmt->bind_param("ssssss", $username, $email, $hashed_password, $address_user, $phone, $verification_token);
         
         if ($stmt->execute()) {
+            sendVerificationEmail($email, $verification_token);
             $success = true;
-            // Automatically log in the user
-            $_SESSION['user_id'] = $stmt->insert_id;
-            $_SESSION['username'] = $username;
-            $_SESSION['role'] = 'user';
-            
-            // Redirect to dashboard or home page after registration
-            header("Location: index.php");
-            exit;
         } else {
             $errors['general'] = 'การลงทะเบียนล้มเหลว กรุณาลองใหม่อีกครั้ง';
         }
@@ -113,9 +147,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
                     <div class="card-body">
                         <?php if ($success): ?>
-                            <div class="alert alert-success">
-                                ลงทะเบียนสำเร็จ! คุณจะถูกนำไปยังหน้าหลัก...
-                            </div>
+                            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                            <script>
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'ลงทะเบียนสำเร็จ!',
+                                    text: 'กรุณาตรวจสอบอีเมล์เพื่อยืนยันบัญชีของคุณ',
+                                    confirmButtonText: 'ตกลง'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = 'login.php';
+                                    }
+                                });
+                            </script>
                         <?php endif; ?>
 
                         <?php if (isset($errors['general'])): ?>

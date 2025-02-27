@@ -2,24 +2,55 @@
 require_once 'config.php';
 include 'admin_navbar.php';
 
+// Function to check if a table exists
+function tableExists($conn, $table) {
+    $result = $conn->query("SHOW TABLES LIKE '$table'");
+    return $result && $result->num_rows > 0;
+}
+
 // Handle User Actions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'delete') {
         $id = $conn->real_escape_string($_POST['user_id']);
 
-        // ป้องกันการลบผู้ดูแล
+        // ตรวจสอบว่าผู้ใช้เป็น admin หรือไม่
         $check_admin = "SELECT role FROM users WHERE id='$id'";
         $result = $conn->query($check_admin);
         $user = $result->fetch_assoc();
-        if ($user['role'] === 'admin') {
+
+        if (!$user) {
+            echo "<div class='alert alert-danger'>ไม่พบผู้ใช้</div>";
+        } elseif ($user['role'] === 'admin') {
             echo "<div class='alert alert-danger'>ไม่สามารถลบผู้ดูแลระบบได้</div>";
         } else {
-            // ลบผู้ใช้จากฐานข้อมูล
+            // ตรวจสอบว่าผู้ใช้มี chat messages หรือไม่
+            if (tableExists($conn, 'chat_messages')) {
+                $check_messages = "SELECT COUNT(*) AS count FROM chat_messages WHERE user_id='$id'";
+                $result = $conn->query($check_messages);
+                $row = $result->fetch_assoc();
+
+                if ($row['count'] > 0) {
+                    // ลบ chat messages ก่อน
+                    $conn->query("DELETE FROM chat_messages WHERE user_id='$id'");
+                }
+            }
+
+            // ตรวจสอบว่าผู้ใช้มี orders หรือไม่
+            $check_orders = "SELECT COUNT(*) AS count FROM orders WHERE user_id='$id'";
+            $result = $conn->query($check_orders);
+            $row = $result->fetch_assoc();
+
+            if ($row['count'] > 0) {
+                // ลบ orders ก่อน
+                $conn->query("DELETE FROM orders WHERE user_id='$id'");
+            }
+
+            // ลบผู้ใช้
             $query = "DELETE FROM users WHERE id='$id'";
             if ($conn->query($query)) {
                 echo "<div class='alert alert-success'>ผู้ใช้ถูกลบเรียบร้อยแล้ว</div>";
                 header('Location: ' . $_SERVER['PHP_SELF']);
-                    exit();
+                exit();
             } else {
                 echo "<div class='alert alert-danger'>เกิดข้อผิดพลาดในการลบผู้ใช้</div>";
             }
@@ -27,12 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Fetch Users excluding admin
+// ดึงข้อมูลผู้ใช้ที่ไม่ใช่ admin
 $users_query = "SELECT * FROM users WHERE role != 'admin'";
 $users_result = $conn->query($users_query);
 ?>
 
-<?php include 'head.php' ?>
+<?php include 'head.php'; ?>
 <body>
     <div class="container mt-5">
         <div class="text-center mb-4">
@@ -60,11 +91,9 @@ $users_result = $conn->query($users_query);
                     <td>
                         <?php 
                             $role = htmlspecialchars($user['role']);
-                            if ($role == 'admin') {
-                                echo "<span class='badge bg-danger'>ผู้ดูแลระบบ</span>";
-                            } else {
-                                echo "<span class='badge bg-success'>ผู้ใช้ทั่วไป</span>";
-                            }
+                            echo $role == 'admin' 
+                                ? "<span class='badge bg-danger'>ผู้ดูแลระบบ</span>" 
+                                : "<span class='badge bg-success'>ผู้ใช้ทั่วไป</span>";
                         ?>
                     </td>
                     <td>

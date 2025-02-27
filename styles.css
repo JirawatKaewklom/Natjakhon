@@ -3,7 +3,7 @@ body {
     font-family: "Athiti", serif;
     font-weight: 400;
     font-style: normal;
-    background-image: url('wall.jpg');
+    background-image: url('wallpaper.jpg');
     background-size: cover; /* ทำให้ภาพครอบคลุมพื้นที่ทั้งหมด */
     background-position: center; /* วางภาพตรงกลาง */
     background-attachment: fixed; /* ภาพจะคงที่เมื่อเลื่อนหน้า */

@@ -1,4 +1,5 @@
 <?php
+ob_start();
 require_once 'config.php';
 include 'navbar.php';
 include "head.php";
@@ -63,102 +64,40 @@ $completed_orders = $stmt_completed->get_result();
             </div>
 
             <!-- ค่าใช้จ่ายทั้งหมด -->
-            <div class="col-md-4">
-                <div class="card shadow-sm">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">ค่าใช้จ่ายทั้งหมด</h5>
-                        <?php
-                        $stmt = $conn->prepare("SELECT SUM(total_price) as total_price FROM orders WHERE user_id = ?");
-                        $stmt->bind_param("i", $_SESSION['user_id']);
-                        $stmt->execute();
-                        $result = $stmt->get_result();
-                        $row = $result->fetch_assoc();
-                        ?>
-                        <p class="display-4 text-success">฿<?= number_format($row['total_price'] ?? 0, 2); ?></p>
-                    </div>
-                </div>
-            </div>
+<div class="col-md-4">
+    <div class="card shadow-sm">
+        <div class="card-body text-center">
+            <h5 class="card-title">ยอดค้างชำระ</h5>
+            <?php
+            $stmt = $conn->prepare("SELECT SUM(total_price) as total_price FROM orders WHERE user_id = ? AND (status = 'pending' OR status = 'processing')");
+            $stmt->bind_param("i", $_SESSION['user_id']);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            ?>
+            <p class="display-4 text-success">฿<?= number_format($row['total_price'] ?? 0, 2); ?></p>
+        </div>
+    </div>
+</div>
         </div>
 
-        <!-- ตารางแสดงคำสั่งที่รอดำเนินการ -->
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <h3 class="text-info">คำสั่งที่รอดำเนินการ</h3>
-                <table class="table table-striped table-bordered table-hover">
-                    <thead class="table-primary">
-                        <tr>
-                            <th>หมายเลขออเดอร์</th>
-                            <th>วันที่</th>
-                            <th>รายการทั้งหมด</th>
-                            <th>ยอดสุทธิ</th>
-                            <th>สถานะ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php while ($order = $pending_orders->fetch_assoc()): ?>
-                        <?php
-                        // นับจำนวนสินค้าที่ไม่ซ้ำกันในออเดอร์นี้
-                        $order_id = $order['id'];
-                        $item_stmt = $conn->prepare("SELECT COUNT(DISTINCT product_id) AS total_items FROM order_items WHERE order_id = ?");
-                        $item_stmt->bind_param("i", $order_id);
-                        $item_stmt->execute();
-                        $item_result = $item_stmt->get_result();
-                        $item_data = $item_result->fetch_assoc();
-                        $total_items = $item_data['total_items'];
-                        ?>
-                        <tr>
-                            <td><?= htmlspecialchars($order['id']); ?></td>
-                            <td><?= date('d M Y', strtotime($order['created_at'])); ?></td>
-                            <td><?= number_format($total_items); ?> รายการ</td>
-                            <td>฿<?= number_format($order['total_price'], 2); ?></td>
-                            <td><span class="badge bg-warning"><?= ucfirst(htmlspecialchars($order['status'])); ?></span></td>
-                        </tr>
-                    <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
+        <!-- Include shoppingcart.php -->
+        <div class="row">
+            <?php include 'shoppingcart.php'; ?>
         </div>
+    </div>
 
-        <!-- ตารางแสดงคำสั่งซื้อที่เสร็จสมบูรณ์แล้ว -->
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <h3 class="text-success">คำสั่งซื้อที่เสร็จสมบูรณ์แล้ว</h3>
-                <table class="table table-striped table-bordered table-hover">
-                    <thead class="table-success">
-                        <tr>
-                            <th>หมายเลขออเดอร์</th>
-                            <th>วันที่</th>
-                            <th>รายการสินค้าทั้งหมด</th>
-                            <th>จำนวนเงินทั้งหมด</th>
-                            <th>สถานะ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php while ($order = $completed_orders->fetch_assoc()): ?>
-                        <?php
-                        // นับจำนวนสินค้าที่ไม่ซ้ำกันในออเดอร์นี้
-                        $order_id = $order['id'];
-                        $item_stmt = $conn->prepare("SELECT COUNT(DISTINCT product_id) AS total_items FROM order_items WHERE order_id = ?");
-                        $item_stmt->bind_param("i", $order_id);
-                        $item_stmt->execute();
-                        $item_result = $item_stmt->get_result();
-                        $item_data = $item_result->fetch_assoc();
-                        $total_items = $item_data['total_items'];
-                        ?>
-                        <tr>
-                            <td><?= htmlspecialchars($order['id']); ?></td>
-                            <td><?= date('d M Y', strtotime($order['created_at'])); ?></td>
-                            <td><?= number_format($total_items); ?> รายการ</td>
-                            <td>฿<?= number_format($order['total_price'], 2); ?></td>
-                            <td><span class="badge bg-success"><?= ucfirst(htmlspecialchars($order['status'])); ?></span></td>
-                        </tr>
-                    <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="text-center mb-5">
+        <p class="text-danger">แจ้งเตือน: กรณีสั่งซื้อสินค้าตั้งแต่เวลา 20.00 น. เป็นต้นไป ทางร้านจะเริ่มจัดส่งสินค้าอีกครั้งในวันถัดไป</p>
+        <p class="text-danger">ติดต่อ: 0832276207(ร้านนัธจกรค้าส่ง)</p>
+        <a href="https://line.me/ti/g2/HjlfjlNRMYYUvYZAJWu5l1uEbEwwcVAaxp6RoQ?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank">
+    <img src="https://scdn.line-apps.com/n/line_add_friends/btn/en.png" alt="เข้าร่วม OpenChat">
+</a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+<?php
+ob_end_flush();
+?>

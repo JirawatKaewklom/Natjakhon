@@ -131,7 +131,7 @@ $item = $result->fetch_assoc();
         </table>
 
         <a href="checkout.php" class="btn btn-success">ดำเนินการยืนยันคำสั่ง</a>
-        <a href="shoppingcart.php" class="btn btn-success">ซื้อสินค้าเพิ่ม</a>
+        <a href="index.php" class="btn btn-success">ซื้อสินค้าเพิ่ม</a>
 
     <?php endif; ?>
 </div>

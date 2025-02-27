@@ -74,7 +74,7 @@ $status_class = $status_badge[$order['status']] ?? 'secondary';
 <?php include 'head.php' ?>
 <body>
 <div class="container my-5">
-    <h1 class="mb-4">การยืนยันการสั่งซื้อ</h1>
+    <h1 class="mb-4">รายละเอียดคำสั่งซื้อ</h1>
 
     <div class="mb-4">
         <h4>ขอบคุณสำหรับการสั่งซื้อของคุณ!</h4>
@@ -137,8 +137,10 @@ $status_class = $status_badge[$order['status']] ?? 'secondary';
 
     <!-- ปุ่มนำทาง -->
     <div class="d-flex mt-4">
-        <a href="pending_orders.php" class="btn btn-primary me-2">ดูคำสั่งซื้อทั้งหมด</a>
-        <a href="index.php" class="btn btn-secondary me-2">กลับไปหน้าหลัก</a>
+        <?php if (!$is_admin): ?>
+            <a href="pending_orders.php" class="btn btn-primary me-2">ดูคำสั่งซื้อทั้งหมด</a>
+        <?php endif; ?>
+        <a href="<?= $is_admin ? 'dashboard.php' : 'index.php'; ?>" class="btn btn-secondary me-2">กลับไปหน้าหลัก</a>
         <button onclick="window.print()" class="btn btn-success">พิมพ์ใบเสร็จ</button>
     </div>
 

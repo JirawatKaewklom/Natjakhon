@@ -48,12 +48,23 @@ function getTotalProducts($conn) {
     return $row['total'];
 }
 
-// ฟังก์ชันสำหรับการดึงข้อมูลจำนวนคำสั่งซื้อทั้งหมด
-function getTotalOrders($conn) {
-    $query = "SELECT COUNT(*) as total FROM orders";
+// ฟังก์ชันสำหรับการดึงข้อมูลจำนวนคำสั่งซื้อทั้งหมดของวันนี้
+function getTotalOrdersToday($conn) {
+    $query = "SELECT COUNT(*) as total FROM orders WHERE DATE(created_at) = CURDATE()";
     $result = executeQuery($conn, $query);
     $row = $result->fetch_assoc();
     return $row['total'];
+}
+
+// ฟังก์ชันสำหรับคืนจำนวนสินค้ากลับสู่ stock_quantity
+function restoreStockQuantity($conn, $orderId) {
+    $query = "SELECT product_id, quantity FROM order_items WHERE order_id = ?";
+    $result = executeQuery($conn, $query, ['i', $orderId]);
+    
+    while ($row = $result->fetch_assoc()) {
+        $updateQuery = "UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?";
+        executeQuery($conn, $updateQuery, ['ii', $row['quantity'], $row['product_id']]);
+    }
 }
 ?>
 
@@ -87,8 +98,8 @@ function getTotalOrders($conn) {
             <div class="col-md-4">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">จำนวนรายการสั่งซื้อทั้งหมด</h5>
-                        <p class="card-text display-4"><?= getTotalOrders($conn); ?></p>
+                        <h5 class="card-title">รายการคำสั่งซื้อทั้งหมดของวันนี้</h5>
+                        <p class="card-text display-4"><?= getTotalOrdersToday($conn); ?></p>
                     </div>
                 </div>
             </div>
@@ -97,58 +108,60 @@ function getTotalOrders($conn) {
         <!-- Recent Orders -->
         <div class="row mt-4">
             <div class="col-md-12">
-                <h3 class="text-info">คำสั่งซื้อล่าสุด</h3>
-                <table class="table table-striped table-bordered table-hover">
-                    <thead class="table-primary">
-                        <tr>
-                            <th>หมายเลขออเดอร์</th>
-                            <th>ลูกค้า</th>
-                            <th>วันที่</th>
-                            <th>รายการสินค้าทั้งหมด</th>
-                            <th>จำนวนเงินทั้งหมด</th>
-                            <th>สถานะ</th>
-                            <th>จัดการ</th>
-                            <th>ข้อมูลคำสั่งซื้อ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $query = "SELECT o.*, u.username FROM orders o 
-                                JOIN users u ON o.user_id = u.id 
-                                WHERE o.status != 'completed'
-                                ORDER BY o.created_at DESC LIMIT 10";
-                        $result = executeQuery($conn, $query);
-                        while ($row = $result->fetch_assoc()) {
-                            $totalAmount = getTotalAmount($conn, $row['id']);
-                            ?>
+                <h3 class="text-info">รายการคำสั่งซื้อ</h3>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="table-primary">
                             <tr>
-                                <td><?php echo $row['id']; ?></td>
-                                <td><?php echo htmlspecialchars($row['username']); ?></td>
-                                <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
-                                <td><?= number_format($totalAmount); ?> รายการ</td>
-                                <td>฿<?php echo number_format($row['total_price'], 2); ?></td>
-                                <td><?php echo ucfirst($row['status']); ?></td>
-                                <td>
-                                    <form action="update_order_status.php" method="POST" class="d-flex align-items-center">
-                                        <select name="status" class="form-select form-select-sm me-2">
-                                            <option value="pending" <?php echo ($row['status'] == 'pending') ? 'selected' : ''; ?>>รอดำเนินการ</option>
-                                            <option value="processing" <?php echo ($row['status'] == 'processing') ? 'selected' : ''; ?>>กำลังดำเนินการ</option>
-                                            <option value="completed" <?php echo ($row['status'] == 'completed') ? 'selected' : ''; ?>>เสร็จสิ้น</option>
-                                            <option value="cancelled" <?php echo ($row['status'] == 'cancelled') ? 'selected' : ''; ?>>ยกเลิก</option>
-                                        </select>
-                                        <input type="hidden" name="order_id" value="<?php echo $row['id']; ?>">
-                                        <button type="submit" class="btn btn-primary btn-sm">อัพเดท</button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <a href="order_confirmation.php?order_id=<?= $row['id']; ?>" class="btn btn-info btn-sm">ดูรายการคำสั่งซื้อ</a>
-                                </td>
+                                <th>หมายเลขออเดอร์</th>
+                                <th>ลูกค้า</th>
+                                <th>วันที่</th>
+                                <th>รายการสินค้าทั้งหมด</th>
+                                <th>จำนวนเงินทั้งหมด</th>
+                                <th>สถานะ</th>
+                                <th>จัดการ</th>
+                                <th>ข้อมูลคำสั่งซื้อ</th>
                             </tr>
+                        </thead>
+                        <tbody>
                             <?php
-                        }
-                        ?>
-                    </tbody>
-                </table>
+                            $query = "SELECT o.*, u.username FROM orders o 
+                                    JOIN users u ON o.user_id = u.id 
+                                    WHERE DATE(o.created_at) = CURDATE()
+                                    ORDER BY o.created_at DESC";
+                            $result = executeQuery($conn, $query);
+                            while ($row = $result->fetch_assoc()) {
+                                $totalAmount = getTotalAmount($conn, $row['id']);
+                                ?>
+                                <tr>
+                                    <td><?php echo $row['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($row['username']); ?></td>
+                                    <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
+                                    <td><?= number_format($totalAmount); ?> รายการ</td>
+                                    <td>฿<?php echo number_format($row['total_price'], 2); ?></td>
+                                    <td><?php echo ucfirst($row['status']); ?></td>
+                                    <td>
+                                        <form action="update_order_status.php" method="POST" class="d-flex align-items-center">
+                                            <select name="status" class="form-select form-select-sm me-2">
+                                                <option value="pending" <?php echo ($row['status'] == 'pending') ? 'selected' : ''; ?>>รอดำเนินการ</option>
+                                                <option value="processing" <?php echo ($row['status'] == 'processing') ? 'selected' : ''; ?>>กำลังดำเนินการ</option>
+                                                <option value="completed" <?php echo ($row['status'] == 'completed') ? 'selected' : ''; ?>>เสร็จสิ้น</option>
+                                                <option value="cancelled" <?php echo ($row['status'] == 'cancelled') ? 'selected' : ''; ?>>ยกเลิก</option>
+                                            </select>
+                                            <input type="hidden" name="order_id" value="<?php echo $row['id']; ?>">
+                                            <button type="submit" class="btn btn-primary btn-sm">อัพเดท</button>
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <a href="order_confirmation.php?order_id=<?= $row['id']; ?>" class="btn btn-info btn-sm">ดูรายการคำสั่งซื้อ</a>
+                                    </td>
+                                </tr>
+                                <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -156,46 +169,48 @@ function getTotalOrders($conn) {
         <div class="row mt-4">
             <div class="col-md-12">
                 <h3 class="text-success">คำสั่งซื้อที่เสร็จสมบูรณ์แล้ว</h3>
-                <table class="table table-striped table-bordered table-hover">
-                    <thead class="table-success">
-                        <tr>
-                            <th>หมายเลขออเดอร์</th>
-                            <th>ลูกค้า</th>
-                            <th>วันที่</th>
-                            <th>รายการสินค้าทั้งหมด</th>
-                            <th>จำนวนเงินทั้งหมด</th>
-                            <th>ข้อมูลคำสั่งซื้อ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $query = "SELECT o.*, u.username FROM orders o 
-                                JOIN users u ON o.user_id = u.id 
-                                WHERE o.status = 'completed'
-                                ORDER BY o.created_at DESC LIMIT 10";
-                        $result = executeQuery($conn, $query);
-                        while ($row = $result->fetch_assoc()) {
-                            $totalAmount = getTotalAmount($conn, $row['id']);
-                            ?>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="table-success">
                             <tr>
-                                <td><?php echo $row['id']; ?></td>
-                                <td><?php echo htmlspecialchars($row['username']); ?></td>
-                                <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
-                                <td><?= number_format($totalAmount); ?> รายการ</td>
-                                <td>฿<?php echo number_format($row['total_price'], 2); ?></td>
-                                <td>
-                                    <a href="order_confirmation.php?order_id=<?= $row['id']; ?>" class="btn btn-info btn-sm">ดูรายการคำสั่งซื้อ</a>
-                                    <form action="delete_order.php" method="POST" class="d-inline" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อนี้?');">
-                                    <input type="hidden" name="order_id" value="<?= $row['id']; ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm">ลบ</button>
-                                    </form>
-                                </td>
+                                <th>หมายเลขออเดอร์</th>
+                                <th>ลูกค้า</th>
+                                <th>วันที่</th>
+                                <th>รายการสินค้าทั้งหมด</th>
+                                <th>จำนวนเงินทั้งหมด</th>
+                                <th>ข้อมูลคำสั่งซื้อ</th>
                             </tr>
+                        </thead>
+                        <tbody>
                             <?php
-                        }
-                        ?>
-                    </tbody>
-                </table>
+                            $query = "SELECT o.*, u.username FROM orders o 
+                                    JOIN users u ON o.user_id = u.id 
+                                    WHERE o.status = 'completed'
+                                    ORDER BY o.created_at DESC LIMIT 10";
+                            $result = executeQuery($conn, $query);
+                            while ($row = $result->fetch_assoc()) {
+                                $totalAmount = getTotalAmount($conn, $row['id']);
+                                ?>
+                                <tr>
+                                    <td><?php echo $row['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($row['username']); ?></td>
+                                    <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
+                                    <td><?= number_format($totalAmount); ?> รายการ</td>
+                                    <td>฿<?php echo number_format($row['total_price'], 2); ?></td>
+                                    <td>
+                                        <a href="order_confirmation.php?order_id=<?= $row['id']; ?>" class="btn btn-info btn-sm">ดูรายการคำสั่งซื้อ</a>
+                                        <form action="delete_order.php" method="POST" class="d-inline" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อนี้?');">
+                                        <input type="hidden" name="order_id" value="<?= $row['id']; ?>">
+                                        <button type="submit" class="btn btn-danger btn-sm">ลบ</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <?php
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

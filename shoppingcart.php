@@ -1,6 +1,5 @@
 <?php
 require_once 'config.php';
-include 'navbar.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -155,6 +154,28 @@ if (isset($_POST['add_to_cart'])) {
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('select[name="category_id"]').change(function() {
+        var category_id = $(this).val();
+        $.ajax({
+            url: 'get_subcategories.php',
+            type: 'GET',
+            data: { category_id: category_id },
+            success: function(response) {
+                var subcategories = JSON.parse(response);
+                var subcategory_select = $('select[name="subcategory_id"]');
+                subcategory_select.empty();
+                subcategory_select.append('<option value="">ค้นหาตามหมวดหมู่ย่อย</option>');
+                $.each(subcategories, function(index, subcategory) {
+                    subcategory_select.append('<option value="' + subcategory.id + '">' + subcategory.name + '</option>');
+                });
+            }
+        });
+    });
+});
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

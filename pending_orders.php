@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // ใช้ Prepared Statement เพื่อป้องกัน SQL Injection
-$query = "SELECT * FROM orders WHERE user_id = ? AND status = 'Pending'";
+$query = "SELECT * FROM orders WHERE user_id = ? AND status IN ('Pending', 'Processing', 'Completed', 'Cancelled')";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $_SESSION['user_id']);
 $stmt->execute();

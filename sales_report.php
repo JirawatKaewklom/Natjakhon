@@ -47,6 +47,8 @@ function printReport($conn, $date) {
                     <th>รายการสินค้าทั้งหมด</th>
                     <th>จำนวนเงินทั้งหมด</th>
                     <th>สถานะ</th>
+                    <th>การยืนยันคำสั่งซื้อ</th>
+                    <th>เปลี่ยนสถานะ</th>
                 </tr>
             </thead>
             <tbody>
@@ -60,6 +62,19 @@ function printReport($conn, $date) {
                         <td><?= number_format($totalAmount); ?> รายการ</td>
                         <td>฿<?php echo number_format($row['total_price'], 2); ?></td>
                         <td><?php echo ucfirst($row['status']); ?></td>
+                        <td><button onclick="viewOrderConfirmation(<?php echo $row['id']; ?>)" class="btn btn-info">ดูการยืนยันคำสั่งซื้อ</button></td>
+                        <td>
+                            <form method="POST" action="update_status.php">
+                                <input type="hidden" name="order_id" value="<?php echo $row['id']; ?>">
+                                <input type="hidden" name="report_date" value="<?= $date; ?>">
+                                <select name="status" class="form-select" onchange="this.form.submit()">
+                                <option value="pending" <?php echo ($row['status'] == 'pending') ? 'selected' : ''; ?>>รอดำเนินการ</option>
+                                                <option value="processing" <?php echo ($row['status'] == 'processing') ? 'selected' : ''; ?>>กำลังดำเนินการ</option>
+                                                <option value="completed" <?php echo ($row['status'] == 'completed') ? 'selected' : ''; ?>>เสร็จสิ้น</option>
+                                                <option value="cancelled" <?php echo ($row['status'] == 'cancelled') ? 'selected' : ''; ?>>ยกเลิก</option>
+                                </select>
+                            </form>
+                        </td>
                     </tr>
                 <?php } ?>
             </tbody>
@@ -99,6 +114,12 @@ function printReport($conn, $date) {
         ?>
 
     </div>
+
+    <script>
+    function viewOrderConfirmation(orderId) {
+        window.open('order_confirmation.php?order_id=' + orderId, '_blank');
+    }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
